@@ -15,8 +15,7 @@ class LittleGo:
         self.current = [[int(j) for j in i[:5]] for i in l[6:11]]
         self.skip = True
         self.komi = 2.5 if self.player == 2 else -2.5
-        self.score = self.evaluate(self.current)
-        
+
         #to find number of moves played
         flag = True
         count = 0
@@ -35,9 +34,11 @@ class LittleGo:
         else:
             data = json.load(open('misc.json'))
             self.moves = data['moves']
+        
+        self.score = self.evaluate(self.current, self.moves)
 
     def getNeighbours(self, i, j):
-        'Function to return all neighbours of a coin'
+        'Function to return all neighbours of a point'
 
         neighbours = []
 
@@ -51,19 +52,16 @@ class LittleGo:
     def countLiberties(self, board, player):
         'Function to count total number of liberties for a player'
 
-        liberties = 0
+        liberties = []
 
         for i in range(5):
             for j in range(5):
-                if board[i][j]==0:
-                    for n in self.getNeighbours(i, j):
-                        if board[n[0]][n[1]] == player:
-                            liberties += 1
-                            break
+                if board[i][j] == player:
+                    liberties += [k for k in self.getNeighbours(i, j) if board[k[0]][k[1]]==0 and k not in liberties]
 
-        return liberties
+        return len(liberties)
 
-    def evaluate(self, board):
+    def evaluate(self, board, moves):
         'Function to evaluate how well the agent is doing'
 
         val = 0
@@ -78,7 +76,9 @@ class LittleGo:
 
         liberties = self.countLiberties(board, self.player)
         opp_liberties = self.countLiberties(board, 1 if self.player == 2 else 2)
-        return val - opp_val + (0.2 * liberties) - (0.2 * opp_liberties) + self.komi
+        if moves == 0:
+            return val - opp_val + self.komi
+        return val - opp_val + (0.5 * ((liberties-opp_liberties) / moves)) + self.komi
 
     def hasLiberties(self, board, row, col):
         'Function to judge whether a point has any liberties left'
@@ -90,9 +90,8 @@ class LittleGo:
         while len(playerGroup) != 0:
             n = playerGroup.pop()
             final += [n]
-            x = [i for i in self.getNeighbours(n[0], n[1])]
 
-            for i in x:
+            for i in self.getNeighbours(n[0], n[1]):
                 if board[i[0]][i[1]] == 0:
                     return True
                 if board[i[0]][i[1]] == player and (i[0], i[1]) not in final and (i[0], i[1]) not in playerGroup:
@@ -160,8 +159,8 @@ class LittleGo:
         'Function to maximize points'
 
         #terminal state test
-        if depth == 4 or self.moves + depth == 25:
-            return self.evaluate(board), None
+        if depth == 4 or self.moves + depth >= 24:
+            return self.evaluate(board, self.moves + depth), None
 
         v = float('-inf')
         best_move = None
@@ -186,8 +185,8 @@ class LittleGo:
         'Function to minimize points'
 
         #terminal state test
-        if depth == 4 or self.moves + depth == 25:
-            return self.evaluate(board), None
+        if depth == 4 or self.moves + depth >= 24:
+            return self.evaluate(board, self.moves + depth), None
 
         player = 1 if self.player==2 else 2
         v = float('inf')
@@ -212,13 +211,17 @@ class LittleGo:
     def miniMax(self, board):
         'Function to drive the minimax algorithm'
 
+        #manually take over central point if not already taken
+        if self.moves == 0 or (self.moves == 1 and self.current[2][2] == 0):
+            return float('inf'), (2, 2)
+
         return self.maxValue(board, float('-inf'), float('inf'), 1)
 
     def analyze(self):
         'Function to analyze the state of the board and make a move'
                 
         score, output = self.miniMax(self.current)
-        if score > self.score:
+        if score >= self.score:
             self.skip = False
             self.output = f'{output[0]},{output[1]}'
 
@@ -237,7 +240,7 @@ class LittleGo:
 def main():
     start_time = time.time()
     agent = LittleGo()
-    agent.parseInput('test.txt')
+    agent.parseInput()
     agent.analyze()
     agent.generateOutput()
     print(time.time() - start_time)
