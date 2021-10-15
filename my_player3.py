@@ -61,6 +61,37 @@ class LittleGo:
 
         return len(liberties)
 
+    def findBiggestGroup(self, board, player):
+        'Function to find the biggest group belonging to a player'
+
+        visited = [[False for i in range(5)] for j in range(5)]
+        groups = []
+        count = 0
+        maxSize = 0
+        
+        #dont need to store groups
+
+        for i in range(5):
+            for j in range(5):
+                if board[i][j] == player and not visited[i][j]:
+                    playerGroup = [(i, j)]
+                    visited[i][j] = True
+                    groups += [[]]
+
+                    while len(playerGroup) != 0:
+                        n = playerGroup.pop()
+                        visited[n[0]][n[1]] = True
+                        groups[count] += [n]
+
+                        for k in self.getNeighbours(n[0], n[1]):
+                            if board[k[0]][k[1]] == player and (k[0], k[1]) not in groups[count] and (k[0], k[1]) not in playerGroup:
+                                playerGroup += [(k[0], k[1])]
+
+                    maxSize = max(maxSize, len(groups[count]))
+                    count += 1
+
+        return maxSize
+
     def evaluate(self, board, moves):
         'Function to evaluate how well the agent is doing'
 
@@ -74,11 +105,16 @@ class LittleGo:
                     else:
                         opp_val += 1
 
-        liberties = self.countLiberties(board, self.player)
-        opp_liberties = self.countLiberties(board, 1 if self.player == 2 else 2)
         if moves == 0:
             return val - opp_val + self.komi
-        return val - opp_val + (0.5 * ((liberties-opp_liberties) / moves)) + self.komi
+
+        liberties = self.countLiberties(board, self.player)
+        opp_liberties = self.countLiberties(board, 1 if self.player == 2 else 2)
+
+        groupSize = self.findBiggestGroup(board, self.player)
+        opp_groupSize = self.findBiggestGroup(board, 1 if self.player == 2 else 2)
+
+        return val - opp_val + (0.5 * ((liberties - opp_liberties) / moves)) + (0.2 * ((groupSize - opp_groupSize) / moves)) + self.komi
 
     def hasLiberties(self, board, row, col):
         'Function to judge whether a point has any liberties left'
