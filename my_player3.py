@@ -65,30 +65,27 @@ class LittleGo:
         'Function to find the biggest group belonging to a player'
 
         visited = [[False for i in range(5)] for j in range(5)]
-        groups = []
-        count = 0
+        group = []
+        # count = 0
         maxSize = 0
-        
-        #dont need to store groups
-
         for i in range(5):
             for j in range(5):
                 if board[i][j] == player and not visited[i][j]:
                     playerGroup = [(i, j)]
                     visited[i][j] = True
-                    groups += [[]]
+                    group = []
 
                     while len(playerGroup) != 0:
                         n = playerGroup.pop()
                         visited[n[0]][n[1]] = True
-                        groups[count] += [n]
+                        group += [n]
 
                         for k in self.getNeighbours(n[0], n[1]):
-                            if board[k[0]][k[1]] == player and (k[0], k[1]) not in groups[count] and (k[0], k[1]) not in playerGroup:
+                            if board[k[0]][k[1]] == player and (k[0], k[1]) not in group and (k[0], k[1]) not in playerGroup:
                                 playerGroup += [(k[0], k[1])]
 
-                    maxSize = max(maxSize, len(groups[count]))
-                    count += 1
+                    maxSize = max(maxSize, len(group))
+                    # count += 1
 
         return maxSize
 
@@ -191,11 +188,15 @@ class LittleGo:
 
         return possibilities
 
+    def terminalStateTest(self, depth):
+
+        return (self.moves < 11 and depth == 4) or (self.moves + depth >= 24) or (depth == 6)
+
     def maxValue(self, board, alpha, beta, depth):
         'Function to maximize points'
 
         #terminal state test
-        if depth == 4 or self.moves + depth >= 24:
+        if self.terminalStateTest(depth):
             return self.evaluate(board, self.moves + depth), None
 
         v = float('-inf')
@@ -221,7 +222,7 @@ class LittleGo:
         'Function to minimize points'
 
         #terminal state test
-        if depth == 4 or self.moves + depth >= 24:
+        if self.terminalStateTest(depth):
             return self.evaluate(board, self.moves + depth), None
 
         player = 1 if self.player==2 else 2
