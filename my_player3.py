@@ -61,33 +61,51 @@ class LittleGo:
 
         return len(liberties)
 
-    def findBiggestGroup(self, board, player):
-        'Function to find the biggest group belonging to a player'
+    def getGroup(self, board, row, col, visited):
+        'Function to find the group of a player'
 
-        visited = [[False for i in range(5)] for j in range(5)]
+        playerGroup = [(row, col)]
+        player = board[row][col]
+        visited[row][col] = True
         group = []
-        # count = 0
-        maxSize = 0
-        for i in range(5):
-            for j in range(5):
-                if board[i][j] == player and not visited[i][j]:
-                    playerGroup = [(i, j)]
-                    visited[i][j] = True
-                    group = []
 
-                    while len(playerGroup) != 0:
-                        n = playerGroup.pop()
-                        visited[n[0]][n[1]] = True
-                        group += [n]
+        while len(playerGroup) != 0:
+            n = playerGroup.pop()
+            visited[n[0]][n[1]] = True
+            group += [n]
 
-                        for k in self.getNeighbours(n[0], n[1]):
-                            if board[k[0]][k[1]] == player and (k[0], k[1]) not in group and (k[0], k[1]) not in playerGroup:
-                                playerGroup += [(k[0], k[1])]
+            for k in self.getNeighbours(n[0], n[1]):
+                if board[k[0]][k[1]] == player and (k[0], k[1]) not in group and (k[0], k[1]) not in playerGroup:
+                    playerGroup += [(k[0], k[1])]
 
-                    maxSize = max(maxSize, len(group))
-                    # count += 1
+        return group, visited
 
-        return maxSize
+    def getGroupLiberty(self, board, groups, player):
+        'Function to find liberty of a set of groups'
+
+        groupLiberties = []
+        for group in groups:
+            for i, j in group:
+                liberties = []
+                if board[i][j] == player:
+                    liberties += [k for k in self.getNeighbours(i, j) if board[k[0]][k[1]]==0 and k not in liberties]
+            groupLiberties += [liberties]
+
+        return groupLiberties
+
+
+    # def findBiggestGroup(self, board, player):
+    #     'Function to find the biggest group belonging to a player'
+
+    #     visited = [[False for _ in range(5)] for _ in range(5)]
+    #     maxSize = 0
+    #     for i in range(5):
+    #         for j in range(5):
+    #             if board[i][j] == player and not visited[i][j]:
+    #                 group, visited = self.getGroup(board, i, j, visited)
+    #                 maxSize = max(maxSize, len(group))
+
+    #     return maxSize
 
     def evaluate(self, board, moves):
         'Function to evaluate how well the agent is doing'
@@ -108,10 +126,10 @@ class LittleGo:
         liberties = self.countLiberties(board, self.player)
         opp_liberties = self.countLiberties(board, 1 if self.player == 2 else 2)
 
-        groupSize = self.findBiggestGroup(board, self.player)
-        opp_groupSize = self.findBiggestGroup(board, 1 if self.player == 2 else 2)
+        # groupSize = self.findBiggestGroup(board, self.player)
+        # opp_groupSize = self.findBiggestGroup(board, 1 if self.player == 2 else 2)
 
-        return val - opp_val + (0.5 * ((liberties - opp_liberties) / moves)) + (0.2 * ((groupSize - opp_groupSize) / moves)) + self.komi
+        return val - opp_val + (0.5 * ((liberties - opp_liberties) / moves)) + self. komi #+ (0.4 * ((groupSize - opp_groupSize) / moves))
 
     def hasLiberties(self, board, row, col):
         'Function to judge whether a point has any liberties left'
@@ -190,7 +208,7 @@ class LittleGo:
 
     def terminalStateTest(self, depth):
 
-        return (self.moves < 11 and depth == 4) or (self.moves + depth >= 24) or (depth == 6)
+        return (self.moves < 11 and depth == 4) or (depth == 6) or (self.moves + depth >= 24)
 
     def maxValue(self, board, alpha, beta, depth):
         'Function to maximize points'
@@ -254,8 +272,43 @@ class LittleGo:
 
         return self.maxValue(board, float('-inf'), float('inf'), 1)
 
+    def greedyCheck(self):
+        'Function to look for an opponent group with 1 remaining liberty'
+
+        opp = 1 if self.player == 2 else 2
+        visited = [[False for _ in range(5)] for _ in range(5)]
+        groups = []
+
+        for i in range(5):
+            for j in range(5):
+                if self.current[i][j] == opp and not visited[i][j]:
+                    group, visited = self.getGroup(self.current, i, j, visited)
+                    groups += [group]
+
+        groupLiberties = self.getGroupLiberty(self.current, groups, opp)
+
+        for i in range(len(groups)):
+            if len(groupLiberties[i]) == 1:
+                move = groupLiberties[i][0]
+                temp = deepcopy(self.current)
+                if self.isValid(self.current, move[0], move[1], self.player):
+                    temp = deepcopy(self.current)
+                    temp[move[0]][move[1]] = self.player
+                    temp = self.removeDeadPieces(temp)
+                    if temp != self.past:
+                        return True, move
+                
+        return False, None
+
     def analyze(self):
         'Function to analyze the state of the board and make a move'
+
+        if self.moves > 8:
+            flag, output = self.greedyCheck()
+            if flag:
+                self.skip = False
+                self.output = f'{output[0]}, {output[1]}'
+                return
                 
         score, output = self.miniMax(self.current)
         if score >= self.score:
