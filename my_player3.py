@@ -163,7 +163,7 @@ class LittleGo:
         for point in toRemove:
             board[point[0]][point[1]] = 0
 
-        return board
+        return board, len(toRemove)
 
 
     def isValid(self, board, i, j, player):
@@ -200,7 +200,7 @@ class LittleGo:
                 if board[i][j] == 0 and self.isValid(board, i, j, player):
                     temp = deepcopy(board)
                     temp[i][j] = player
-                    temp = self.removeDeadPieces(temp)
+                    temp, _ = self.removeDeadPieces(temp)
                     if depth > 1 or temp != self.past:
                         possibilities += [[temp, [i, j]]]
 
@@ -287,6 +287,10 @@ class LittleGo:
 
         groupLiberties = self.getGroupLiberty(self.current, groups, opp)
 
+        flag = False
+        max = 0
+        best_move = None
+
         for i in range(len(groups)):
             if len(groupLiberties[i]) == 1:
                 move = groupLiberties[i][0]
@@ -294,11 +298,13 @@ class LittleGo:
                 if self.isValid(self.current, move[0], move[1], self.player):
                     temp = deepcopy(self.current)
                     temp[move[0]][move[1]] = self.player
-                    temp = self.removeDeadPieces(temp)
-                    if temp != self.past:
-                        return True, move
+                    temp, pieces = self.removeDeadPieces(temp)
+                    if temp != self.past and pieces > max:
+                        flag = True
+                        max = pieces
+                        best_move = move
                 
-        return False, None
+        return flag, best_move
 
     def analyze(self):
         'Function to analyze the state of the board and make a move'
