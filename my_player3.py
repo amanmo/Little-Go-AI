@@ -85,8 +85,8 @@ class LittleGo:
 
         groupLiberties = []
         for group in groups:
+            liberties = []
             for i, j in group:
-                liberties = []
                 if board[i][j] == player:
                     liberties += [k for k in self.getNeighbours(i, j) if board[k[0]][k[1]]==0 and k not in liberties]
             groupLiberties += [liberties]
@@ -129,7 +129,7 @@ class LittleGo:
         # groupSize = self.findBiggestGroup(board, self.player)
         # opp_groupSize = self.findBiggestGroup(board, 1 if self.player == 2 else 2)
 
-        return val - opp_val + (0.5 * ((liberties - (1.2 * opp_liberties)) / moves)) + self. komi #+ (0.4 * ((groupSize - opp_groupSize) / moves))
+        return val - opp_val + (0.5 * ((liberties - opp_liberties) / moves)) + self.komi #+ (0.4 * ((groupSize - opp_groupSize) / moves))
 
     def hasLiberties(self, board, row, col):
         'Function to judge whether a point has any liberties left'
