@@ -35,7 +35,18 @@ class LittleGo:
             data = json.load(open('misc.json'))
             self.moves = data['moves']
         
-        self.score = self.evaluate(self.current, self.moves)
+        self.score = self.calcScore(self.current, self.player)
+
+    def calcScore(self, board, player):
+        'Function to calculate score of a player'
+
+        score = 0 if player == 1 else 2.5
+        for i in range(5):
+            for j in range(5):
+                if board[i][j] == player:
+                    score += 1
+
+        return score
 
     def getNeighbours(self, i, j):
         'Function to return all neighbours of a point'
@@ -208,7 +219,7 @@ class LittleGo:
 
     def terminalStateTest(self, depth):
 
-        return (self.moves < 11 and depth == 4) or (depth == 6) or (self.moves + depth >= 24)
+        return (self.moves < 11 and depth == 4) or (depth == 6) or (self.moves + depth >= 26)
 
     def maxValue(self, board, alpha, beta, depth):
         'Function to maximize points'
@@ -316,7 +327,9 @@ class LittleGo:
                 self.output = f'{output[0]}, {output[1]}'
                 return
                 
-        score, output = self.miniMax(self.current)
+        _, output = self.miniMax(self.current)
+        self.current[output[0]][output[1]] = self.player
+        score = self.calcScore(self.current, self.player)
         if score >= self.score:
             self.skip = False
             self.output = f'{output[0]},{output[1]}'
