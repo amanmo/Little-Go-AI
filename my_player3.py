@@ -178,14 +178,14 @@ class LittleGo:
 
         return False
 
-    def removeDeadPieces(self, board):
+    def removeDeadPieces(self, board, opp):
         'Function to remove dead pieces from the board'
 
         toRemove = []
 
         for i in range(5):
             for j in range(5):
-                if not self.hasLiberties(board, i , j):
+                if board[i][j] == opp and not self.hasLiberties(board, i, j):
                     toRemove += [(i,j)]
 
         for point in toRemove:
@@ -214,9 +214,9 @@ class LittleGo:
 
             #check whether they have any liberties
             for n in opponents:
-                if self.hasLiberties(temp, n[0], n[1]):
-                    return False
-            return True
+                if not self.hasLiberties(temp, n[0], n[1]):
+                    return True
+            return False
 
     def generateValidMoves(self, board, player, depth):
         'Function to find all possible valid moves'
@@ -228,7 +228,7 @@ class LittleGo:
                 if board[i][j] == 0 and self.isValid(board, i, j, player):
                     temp = deepcopy(board)
                     temp[i][j] = player
-                    temp, _ = self.removeDeadPieces(temp)
+                    temp, _ = self.removeDeadPieces(temp, 1 if player == 2 else 2)
                     if depth > 1 or temp != self.past:
                         possibilities += [[temp, [i, j]]]
 
@@ -318,15 +318,65 @@ class LittleGo:
         for i in range(len(groups)):
             if len(groupLiberties[i]) == 1:
                 move = groupLiberties[i][0]
-                temp = deepcopy(self.current)
                 if self.isValid(self.current, move[0], move[1], self.player):
                     temp = deepcopy(self.current)
                     temp[move[0]][move[1]] = self.player
-                    temp, pieces = self.removeDeadPieces(temp)
+                    temp, pieces = self.removeDeadPieces(temp, opp)
                     if temp != self.past and pieces > max:
                         flag = True
                         max = pieces
                         best_move = move
+                
+        return flag, best_move
+
+    def aggressiveCheck(self):
+        'Function to check aggressively for groups to eliminate'
+
+        opp = 1 if self.player == 2 else 2
+        visited = [[False for _ in range(5)] for _ in range(5)]
+        groups = []
+
+        for i in range(5):
+            for j in range(5):
+                if self.current[i][j] == opp and not visited[i][j]:
+                    group, visited = self.getGroup(self.current, i, j, visited)
+                    groups += [group]
+
+        groupLiberties = self.getGroupLiberty(self.current, groups, opp)
+
+        flag = False
+        maxPieces = 0
+        best_move = None
+
+        for i in range(len(groups)):
+            if len(groupLiberties[i]) == 2:
+                #if the number of pieces is bigger, then proceed
+                if len(groups[i]) > maxPieces:
+                    opt1, opt2 = groupLiberties[i]
+                    val1 = val2 = float('-inf')
+
+                    #1 followed by 2
+                    if self.isValid(self.current, opt1[0], opt1[1], self.player):
+                        temp1 = deepcopy(self.current)
+                        temp1[opt1[0]][opt1[1]] = self.player
+                        temp1, _ = self.removeDeadPieces(temp1, opp)
+                        if temp1 != self.past:
+                            val1 = self.evaluate(temp1, self.moves + 1)
+
+                    #2 followed by 1
+                    if self.isValid(self.current, opt2[0], opt2[1], self.player):
+                        temp2 = deepcopy(self.current)
+                        temp2[opt2[0]][opt2[1]] = self.player
+                        temp2, _ = self.removeDeadPieces(temp2, opp)
+                        if temp2 != self.past:
+                            val2 = self.evaluate(temp2, self.moves + 1)
+
+                if val1 != float('-inf') or val2 != float('-inf'):
+                    flag = True
+                    if val1 > val2:
+                        best_move = opt1
+                    else:
+                        best_move = opt2
                 
         return flag, best_move
 
@@ -360,7 +410,7 @@ class LittleGo:
                 self.skip = False
                 self.output = output
                 return
-                
+
             #Step 2: Q value check
             Q = pickle.load(open('Q_table.txt', 'rb'))
             state = self.boardToString(self.current)
@@ -377,7 +427,15 @@ class LittleGo:
                     self.output = (int(best_action[0]), int(best_action[1]))
                     return
 
-        #Step 3: MiniMax with Alpha Beta
+            #Step 3: Aggressive Check
+            if self.moves + 2 < 25:
+                flag, output = self.aggressiveCheck()
+                if flag:
+                    self.skip = False
+                    self.output = output
+                    return
+
+        #Step 4: MiniMax with Alpha Beta
         _, output = self.miniMax(self.current)
         temp = deepcopy(self.current)
         temp[output[0]][output[1]] = self.player
@@ -404,6 +462,6 @@ def main():
     agent.parseInput()
     agent.analyze()
     agent.generateOutput()
-    print(time.time() - start_time)
+    # print(time.time() - start_time)
 
 main()
