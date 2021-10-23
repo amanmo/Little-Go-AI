@@ -1,5 +1,8 @@
 from copy import deepcopy
 import json
+import math
+import pickle
+import random
 import time
 
 class LittleGo:
@@ -29,11 +32,25 @@ class LittleGo:
 
         if flag:
             self.moves = 0
+            self.history = []
         elif count == 1:
             self.moves = 1
+            self.history = []
         else:
             data = json.load(open('misc.json'))
             self.moves = data['moves']
+            self.history = data['history']
+
+        flag = False
+        for i in range(5):
+            for j in range(5):
+                if self.past[i][j] == 0 and self.current[i][j] != 0:
+                    self.history = [[self.boardToString(self.past), str(i) + str(j), 1 if self.player == 2 else 2]] + self.history
+                    flag  = True
+                    break
+            if flag:
+                break
+
         
         self.score = self.calcScore(self.current, self.player)
 
@@ -219,7 +236,7 @@ class LittleGo:
 
     def terminalStateTest(self, depth):
 
-        return (self.moves < 11 and depth == 4) or (depth == 6) or (self.moves + depth >= 26)
+        return (self.moves < 11 and depth == 4) or (depth == 6) or (self.moves + depth >= 25)
 
     def maxValue(self, board, alpha, beta, depth):
         'Function to maximize points'
@@ -277,10 +294,6 @@ class LittleGo:
     def miniMax(self, board):
         'Function to drive the minimax algorithm'
 
-        #manually take over central point if not already taken
-        if self.moves == 0 or (self.moves == 1 and self.current[2][2] == 0):
-            return float('inf'), (2, 2)
-
         return self.maxValue(board, float('-inf'), float('inf'), 1)
 
     def greedyCheck(self):
@@ -317,22 +330,61 @@ class LittleGo:
                 
         return flag, best_move
 
+    def boardToString(self, board):
+        'Function to convert board to string'
+
+        x = ''
+        for i in board:
+            for j in i:
+                x += str(j)
+        return x
+
     def analyze(self):
         'Function to analyze the state of the board and make a move'
 
-        if self.moves > 8:
+        #manually surround central point
+        if self.moves < 5:
+            plus = [(1,2), (2,1), (2,3), (3,2)]
+            i = random.choice(plus)
+            while self.current[i[0]][i[1]] != 0:
+                plus.remove(i)
+                i = random.choice(plus)
+            self.skip = False
+            self.output = i
+            return
+
+        else:
+            #Step 1: Greedy Check
             flag, output = self.greedyCheck()
             if flag:
                 self.skip = False
-                self.output = f'{output[0]}, {output[1]}'
+                self.output = output
                 return
                 
+            #Step 2: Q value check
+            Q = pickle.load(open('Q_table.txt', 'rb'))
+            state = self.boardToString(self.current)
+            if state in Q:
+                best_action = None
+                extreme_q = float('-inf') if self.player == 1 else float('inf')
+                for action in Q[state]:
+                    if (self.player == 1 and Q[state][action] > extreme_q) or (self.player == 2 and Q[state][action] < extreme_q):
+                        extreme_q = Q[state][action]
+                        best_action = action
+
+                if (math.fabs(Q[state][best_action]) > 0.1):
+                    self.skip = False
+                    self.output = (int(best_action[0]), int(best_action[1]))
+                    return
+
+        #Step 3: MiniMax with Alpha Beta
         _, output = self.miniMax(self.current)
-        self.current[output[0]][output[1]] = self.player
-        score = self.calcScore(self.current, self.player)
+        temp = deepcopy(self.current)
+        temp[output[0]][output[1]] = self.player
+        score = self.calcScore(temp, self.player)
         if score >= self.score:
             self.skip = False
-            self.output = f'{output[0]},{output[1]}'
+            self.output = output
 
     def generateOutput(self):
         'Function to generate output file'
@@ -341,9 +393,9 @@ class LittleGo:
             if self.skip:
                 f.write('PASS')
             else:
-                f.write(self.output)
+                f.write(f'{self.output[0]}, {self.output[1]}')
             
-            x = {'moves': self.moves + 2}
+            x = {'moves': self.moves + 2, 'history': [[self.boardToString(self.current), str(self.output[0]) + str(self.output[1]), self.player]] + self.history}
             json.dump(x, open('misc.json', 'w'))
 
 def main():
