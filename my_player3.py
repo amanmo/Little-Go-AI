@@ -51,7 +51,6 @@ class LittleGo:
             if flag:
                 break
 
-        
         self.score = self.calcScore(self.current, self.player)
 
     def calcScore(self, board, player):
@@ -121,20 +120,6 @@ class LittleGo:
 
         return groupLiberties
 
-
-    # def findBiggestGroup(self, board, player):
-    #     'Function to find the biggest group belonging to a player'
-
-    #     visited = [[False for _ in range(5)] for _ in range(5)]
-    #     maxSize = 0
-    #     for i in range(5):
-    #         for j in range(5):
-    #             if board[i][j] == player and not visited[i][j]:
-    #                 group, visited = self.getGroup(board, i, j, visited)
-    #                 maxSize = max(maxSize, len(group))
-
-    #     return maxSize
-
     def evaluate(self, board, moves):
         'Function to evaluate how well the agent is doing'
 
@@ -154,10 +139,7 @@ class LittleGo:
         liberties = self.countLiberties(board, self.player)
         opp_liberties = self.countLiberties(board, 1 if self.player == 2 else 2)
 
-        # groupSize = self.findBiggestGroup(board, self.player)
-        # opp_groupSize = self.findBiggestGroup(board, 1 if self.player == 2 else 2)
-
-        return val - opp_val + (0.5 * ((liberties - opp_liberties) / moves)) + self.komi #+ (0.4 * ((groupSize - opp_groupSize) / moves))
+        return val - opp_val + (0.5 * ((liberties - opp_liberties) / moves)) + self.komi
 
     def hasLiberties(self, board, row, col):
         'Function to judge whether a point has any liberties left'
@@ -329,57 +311,6 @@ class LittleGo:
                 
         return flag, best_move
 
-    def aggressiveCheck(self):
-        'Function to check aggressively for groups to eliminate'
-
-        opp = 1 if self.player == 2 else 2
-        visited = [[False for _ in range(5)] for _ in range(5)]
-        groups = []
-
-        for i in range(5):
-            for j in range(5):
-                if self.current[i][j] == opp and not visited[i][j]:
-                    group, visited = self.getGroup(self.current, i, j, visited)
-                    groups += [group]
-
-        groupLiberties = self.getGroupLiberty(self.current, groups, opp)
-
-        flag = False
-        maxPieces = 0
-        best_move = None
-
-        for i in range(len(groups)):
-            if len(groupLiberties[i]) == 2:
-                #if the number of pieces is bigger, then proceed
-                if len(groups[i]) > maxPieces:
-                    opt1, opt2 = groupLiberties[i]
-                    val1 = val2 = float('-inf')
-
-                    #1 followed by 2
-                    if self.isValid(self.current, opt1[0], opt1[1], self.player):
-                        temp1 = deepcopy(self.current)
-                        temp1[opt1[0]][opt1[1]] = self.player
-                        temp1, _ = self.removeDeadPieces(temp1, opp)
-                        if temp1 != self.past:
-                            val1 = self.evaluate(temp1, self.moves + 1)
-
-                    #2 followed by 1
-                    if self.isValid(self.current, opt2[0], opt2[1], self.player):
-                        temp2 = deepcopy(self.current)
-                        temp2[opt2[0]][opt2[1]] = self.player
-                        temp2, _ = self.removeDeadPieces(temp2, opp)
-                        if temp2 != self.past:
-                            val2 = self.evaluate(temp2, self.moves + 1)
-
-                if val1 != float('-inf') or val2 != float('-inf'):
-                    flag = True
-                    if val1 > val2:
-                        best_move = opt1
-                    else:
-                        best_move = opt2
-                
-        return flag, best_move
-
     def boardToString(self, board):
         'Function to convert board to string'
 
@@ -427,15 +358,7 @@ class LittleGo:
                     self.output = (int(best_action[0]), int(best_action[1]))
                     return
 
-            #Step 3: Aggressive Check
-            if self.moves + 2 < 25:
-                flag, output = self.aggressiveCheck()
-                if flag:
-                    self.skip = False
-                    self.output = output
-                    return
-
-        #Step 4: MiniMax with Alpha Beta
+        #Step 3: MiniMax with Alpha Beta
         _, output = self.miniMax(self.current)
         temp = deepcopy(self.current)
         temp[output[0]][output[1]] = self.player
