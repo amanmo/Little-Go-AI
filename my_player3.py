@@ -200,7 +200,7 @@ class LittleGo:
                     return True
             return False
 
-    def generateValidMoves(self, board, player, depth):
+    def generateValidMoves(self, board, player, depth, checker = False):
         'Function to find all possible valid moves'
 
         possibilities = []
@@ -212,19 +212,25 @@ class LittleGo:
                     temp[i][j] = player
                     temp, _ = self.removeDeadPieces(temp, 1 if player == 2 else 2)
                     if depth > 1 or temp != self.past:
-                        possibilities += [[temp, [i, j]]]
+                        if checker:
+                            return True
+                        else:
+                            possibilities += [[temp, [i, j]]]
 
-        return possibilities
+        if checker:
+            return False
+        else:
+            return possibilities
 
-    def terminalStateTest(self, depth):
+    def terminalStateTest(self, board, player, depth):
 
-        return (self.moves < 11 and depth == 4) or (depth == 6) or (self.moves + depth >= 25)
+        return (self.moves < 11 and depth == 4) or (depth == 6) or (self.moves + depth >= 25) or not self.generateValidMoves(board, player, depth, True)
 
     def maxValue(self, board, alpha, beta, depth):
         'Function to maximize points'
 
         #terminal state test
-        if self.terminalStateTest(depth):
+        if self.terminalStateTest(board, self.player, depth):
             return self.evaluate(board, self.moves + depth), None
 
         v = float('-inf')
@@ -249,11 +255,12 @@ class LittleGo:
     def minValue(self, board, alpha, beta, depth):
         'Function to minimize points'
 
+        player = 1 if self.player==2 else 2
+
         #terminal state test
-        if self.terminalStateTest(depth):
+        if self.terminalStateTest(board, player, depth):
             return self.evaluate(board, self.moves + depth), None
 
-        player = 1 if self.player==2 else 2
         v = float('inf')
         best_move = None
 
@@ -324,7 +331,7 @@ class LittleGo:
         'Function to analyze the state of the board and make a move'
 
         #manually surround central point
-        if self.moves < 5:
+        if self.moves < 4:
             plus = [(1,2), (2,1), (2,3), (3,2)]
             i = random.choice(plus)
             while self.current[i[0]][i[1]] != 0:
@@ -360,6 +367,8 @@ class LittleGo:
 
         #Step 3: MiniMax with Alpha Beta
         _, output = self.miniMax(self.current)
+        if output is None:
+            return
         temp = deepcopy(self.current)
         temp[output[0]][output[1]] = self.player
         score = self.calcScore(temp, self.player)
@@ -371,12 +380,15 @@ class LittleGo:
         'Function to generate output file'
 
         with open('output.txt', 'w') as f:
+
+            x = {'moves': self.moves + 2}
             if self.skip:
                 f.write('PASS')
+                x['history'] = self.history
             else:
                 f.write(f'{self.output[0]}, {self.output[1]}')
+                x['history'] = [[self.boardToString(self.current), str(self.output[0]) + str(self.output[1]), self.player]] + self.history
             
-            x = {'moves': self.moves + 2, 'history': [[self.boardToString(self.current), str(self.output[0]) + str(self.output[1]), self.player]] + self.history}
             json.dump(x, open('misc.json', 'w'))
 
 def main():
