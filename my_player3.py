@@ -342,6 +342,29 @@ class LittleGo:
             return
 
         else:
+            
+            #manually surround central point, if possible
+            if self.moves < 6:
+                plus = []
+                for i in [(1,2), (2,1), (2,3), (3,2)]:
+                    if self.current[i[0]][i[1]] == 0:
+                        plus += [i]
+                
+                if len(plus)!=0:
+                    best_plus = None
+                    max_val = float('-inf')
+                    for i in plus:
+                        temp = deepcopy(self.current)
+                        temp[i[0]][i[1]] = self.player
+                        val = self.evaluate(temp, self.moves + 1)
+                        if val >= max_val:
+                            max_val = val
+                            best_plus = i
+                    self.skip = False
+                    self.output = best_plus
+                    return    
+
+
             #Step 1: Greedy Check
             flag, output = self.greedyCheck()
             if flag:
