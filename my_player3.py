@@ -327,6 +327,14 @@ class LittleGo:
                 x += str(j)
         return x
 
+    def rotateQState(self, board):
+
+        return list(zip(*board[::-1]))
+
+    def mirrorBoard(self, board):
+        
+        return [[board[i][4-j] for j in range(5)] for i in range(5)]
+
     def analyze(self):
         'Function to analyze the state of the board and make a move'
 
@@ -374,23 +382,47 @@ class LittleGo:
 
             #Step 2: Q value check
             Q = pickle.load(open('Q_table.txt', 'rb'))
-            state = self.boardToString(self.current)
-            if state in Q:
+            coordinates = [[(i, j) for j in range(5)] for i in range(5)]
+            Q_flag = False
+            sampleBoard = deepcopy(self.current)
+
+            #Find original state or any of its rotations
+            for i in range(4):
+                if self.boardToString(sampleBoard) in Q:
+                    Q_flag = True
+                    state = self.boardToString(sampleBoard)
+                    coordinateMatrix = coordinates
+                    break
+                if self.boardToString(self.mirrorBoard(sampleBoard)) in Q:
+                    Q_flag = True
+                    state = self.boardToString(self.mirrorBoard(sampleBoard))
+                    coordinateMatrix = self.mirrorBoard(coordinates)
+                    break
+                sampleBoard = self.rotateQState(sampleBoard)
+                coordinates = self.rotateQState(coordinates)
+
+            #If state exists in Q, find best action
+            if Q_flag:
                 best_action = None
-                extreme_q = float('-inf') if self.player == 1 else float('inf')
+                extreme_q = 0
                 for action in Q[state]:
                     if (self.player == 1 and Q[state][action] > extreme_q) or (self.player == 2 and Q[state][action] < extreme_q):
                         extreme_q = Q[state][action]
-                        best_action = action
+                        best_action = (int(action[0]), int(action[1]))
 
-                if (math.fabs(Q[state][best_action]) > 0.1) and self.isValid(self.current, int(best_action[0]), int(best_action[1]), self.player):
-                    temp = deepcopy(self.current)
-                    temp[int(best_action[0])][int(best_action[1])] = self.player
-                    temp, _ = self.removeDeadPieces(temp, 1 if self.player == 2 else 2)
-                    if temp != self.past:
-                        self.skip = False
-                        self.output = (int(best_action[0]), int(best_action[1]))
-                        return
+                if(math.fabs(extreme_q) > 0.1):
+
+                    #Find rotated version of best action
+                    best_action = coordinateMatrix[best_action[0]][best_action[1]]
+
+                    if self.isValid(self.current, best_action[0], best_action[1], self.player):
+                        temp = deepcopy(self.current)
+                        temp[best_action[0]][best_action[1]] = self.player
+                        temp, _ = self.removeDeadPieces(temp, 1 if self.player == 2 else 2)
+                        if temp != self.past:
+                            self.skip = False
+                            self.output = (best_action[0], best_action[1])
+                            return
 
         #Step 3: MiniMax with Alpha Beta
         _, output = self.miniMax(self.current)
