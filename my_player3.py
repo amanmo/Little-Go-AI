@@ -383,10 +383,14 @@ class LittleGo:
                         extreme_q = Q[state][action]
                         best_action = action
 
-                if (math.fabs(Q[state][best_action]) > 0.1):
-                    self.skip = False
-                    self.output = (int(best_action[0]), int(best_action[1]))
-                    return
+                if (math.fabs(Q[state][best_action]) > 0.1) and self.isValid(self.current, int(best_action[0]), int(best_action[1]), self.player):
+                    temp = deepcopy(self.current)
+                    temp[int(best_action[0])][int(best_action[1])] = self.player
+                    temp, _ = self.removeDeadPieces(temp, 1 if self.player == 2 else 2)
+                    if temp != self.past:
+                        self.skip = False
+                        self.output = (int(best_action[0]), int(best_action[1]))
+                        return
 
         #Step 3: MiniMax with Alpha Beta
         _, output = self.miniMax(self.current)
