@@ -172,7 +172,7 @@ class LittleGo:
         eyes = self.findEyes(board, self.player)
         opp_eyes = self.findEyes(board, 1 if self.player == 2 else 2)
 
-        return val - opp_val + (0.5 * ((liberties - opp_liberties) / moves)) + (0.4 * ((eyes - opp_eyes) / moves)) + self.komi
+        return val - opp_val + (0.5 * ((liberties - opp_liberties) / moves)) + (0.4 * (eyes - opp_eyes)) + self.komi
 
     def hasLiberties(self, board, row, col):
         'Function to judge whether a point has any liberties left'
@@ -388,7 +388,7 @@ class LittleGo:
         else:
             
             #manually surround central point, if possible
-            if self.moves < 6:
+            if self.moves < 8:
                 plus = []
                 for i in [(1,2), (2,1), (2,3), (3,2)]:
                     if self.current[i[0]][i[1]] == 0:
