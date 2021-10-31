@@ -64,17 +64,22 @@ class LittleGo:
 
         return score
 
+    def validPoint(self, i, j):
+        'Function to check if this point exists on the board'
+
+        if i>-1 and i<5 and j>-1 and j<5:
+            return True
+        return False
+
     def getNeighbours(self, i, j):
         'Function to return all neighbours of a point'
 
-        neighbours = []
+        return [k for k in [(i-1, j), (i+1, j), (i, j-1), (i, j+1)] if self.validPoint(k[0], k[1])]
 
-        if i>0: neighbours += [(i-1, j)]
-        if i<4: neighbours += [(i+1, j)]
-        if j>0: neighbours += [(i, j-1)]
-        if j<4: neighbours += [(i, j+1)]
+    def getDiagonalNeighbours(self, i, j):
+        'Function to return diagonal neighbours of a point'
 
-        return neighbours
+        return [k for k in [(i-1, j-1), (i-1, j+1), (i+1, j-1), (i+1, j+1)] if self.validPoint(k[0], k[1])]
 
     def countLiberties(self, board, player):
         'Function to count total number of liberties for a player'
@@ -120,6 +125,31 @@ class LittleGo:
 
         return groupLiberties
 
+    def findEyes(self, board, player):
+        'Function to find number of eyes held by player'
+
+        count = 0
+        for i in range(5):
+            for j in range(5):
+                if board[i][j]==0:
+                    
+                    flag = True
+                    for n in self.getNeighbours(i, j):
+                        if board[n[0]][n[1]] != player:
+                            flag = False
+                            break
+
+                    if flag:
+                        inner_flag = True
+                        for n in self.getDiagonalNeighbours(i, j):
+                            if board[n[0]][n[1]] != player:
+                                inner_flag = False
+                                break
+                        if inner_flag:
+                            count += 1
+
+        return count
+
     def evaluate(self, board, moves):
         'Function to evaluate how well the agent is doing'
 
@@ -139,7 +169,10 @@ class LittleGo:
         liberties = self.countLiberties(board, self.player)
         opp_liberties = self.countLiberties(board, 1 if self.player == 2 else 2)
 
-        return val - opp_val + (0.5 * ((liberties - opp_liberties) / moves)) + self.komi
+        eyes = self.findEyes(board, self.player)
+        opp_eyes = self.findEyes(board, 1 if self.player == 2 else 2)
+
+        return val - opp_val + (0.5 * ((liberties - opp_liberties) / moves)) + (0.4 * ((eyes - opp_eyes) / moves)) + self.komi
 
     def hasLiberties(self, board, row, col):
         'Function to judge whether a point has any liberties left'
@@ -223,6 +256,7 @@ class LittleGo:
             return possibilities
 
     def terminalStateTest(self, board, player, depth):
+        'Function used to limit miniMax'
 
         return (self.moves < 11 and depth == 4) or (depth == 6) or (self.moves + depth >= 25) or not self.generateValidMoves(board, player, depth, True)
 
@@ -328,10 +362,12 @@ class LittleGo:
         return x
 
     def rotateQState(self, board):
+        'Function to find clockwise rotation of board'
 
         return list(zip(*board[::-1]))
 
     def mirrorBoard(self, board):
+        'Function to find the mirror image of board'
         
         return [[board[i][4-j] for j in range(5)] for i in range(5)]
 
