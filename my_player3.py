@@ -76,10 +76,10 @@ class LittleGo:
 
         return [k for k in [(i-1, j), (i+1, j), (i, j-1), (i, j+1)] if self.validPoint(k[0], k[1])]
 
-    # def getDiagonalNeighbours(self, i, j):
-    #     'Function to return diagonal neighbours of a point'
+    def getDiagonalNeighbours(self, i, j):
+        'Function to return diagonal neighbours of a point'
 
-    #     return [k for k in [(i-1, j-1), (i-1, j+1), (i+1, j-1), (i+1, j+1)] if self.validPoint(k[0], k[1])]
+        return [k for k in [(i-1, j-1), (i-1, j+1), (i+1, j-1), (i+1, j+1)] if self.validPoint(k[0], k[1])]
 
     def countLiberties(self, board, player):
         'Function to count total number of liberties for a player'
@@ -125,14 +125,13 @@ class LittleGo:
 
         return groupLiberties
 
-    def findEyes(self, board, player):
-        'Function to find number of eyes held by player'
+    def findSurroundedPoints(self, board, player):
+        'Function to find points that are surrounded by a player'
 
-        count = 0
+        points = []
         for i in range(5):
             for j in range(5):
                 if board[i][j]==0:
-                    
                     flag = True
                     for n in self.getNeighbours(i, j):
                         if board[n[0]][n[1]] != player:
@@ -140,19 +139,34 @@ class LittleGo:
                             break
 
                     if flag:
-                        if not self.isValid(board, i, j, 1 if player == 2 else 2):
-                            count += 1
-        #                 inner_flag = True
-        #                 for n in self.getDiagonalNeighbours(i, j):
-        #                     if board[n[0]][n[1]] != player:
-        #                         inner_flag = False
-        #                         break
-        #                 if inner_flag:
-        #                     count += 1
+                        points += [(i, j)]
+        return points
 
-                            
+    def isTrueEye(self, board, player, point):
+        'Function to check if a point is a true eye held by player'
 
+        flag = True
+        for n in self.getDiagonalNeighbours(point[0], point[1]):
+            if board[n[0]][n[1]] != player:
+                flag = False
+                break
 
+        return flag
+
+    def isFalseEye(self, board, player, point):
+        'Function to check if a point is a false eye held by player'
+
+        return not self.isValid(board, point[0], point[1], 1 if player == 2 else 2)
+
+    def findEyes(self, board, player):
+        'Function to evaluate total number of eyes held by a player'
+
+        count = 0
+        for point in self.findSurroundedPoints(board, player):
+            if self.isTrueEye(board, player, point):
+                count += 1
+            elif self.isFalseEye(board, player, point):
+                count += 0.4
         return count
 
     def evaluate(self, board, moves):
