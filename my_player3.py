@@ -76,10 +76,10 @@ class LittleGo:
 
         return [k for k in [(i-1, j), (i+1, j), (i, j-1), (i, j+1)] if self.validPoint(k[0], k[1])]
 
-    def getDiagonalNeighbours(self, i, j):
-        'Function to return diagonal neighbours of a point'
+    # def getDiagonalNeighbours(self, i, j):
+    #     'Function to return diagonal neighbours of a point'
 
-        return [k for k in [(i-1, j-1), (i-1, j+1), (i+1, j-1), (i+1, j+1)] if self.validPoint(k[0], k[1])]
+    #     return [k for k in [(i-1, j-1), (i-1, j+1), (i+1, j-1), (i+1, j+1)] if self.validPoint(k[0], k[1])]
 
     def countLiberties(self, board, player):
         'Function to count total number of liberties for a player'
@@ -140,13 +140,18 @@ class LittleGo:
                             break
 
                     if flag:
-                        inner_flag = True
-                        for n in self.getDiagonalNeighbours(i, j):
-                            if board[n[0]][n[1]] != player:
-                                inner_flag = False
-                                break
-                        if inner_flag:
+                        if not self.isValid(board, i, j, 1 if player == 2 else 2):
                             count += 1
+        #                 inner_flag = True
+        #                 for n in self.getDiagonalNeighbours(i, j):
+        #                     if board[n[0]][n[1]] != player:
+        #                         inner_flag = False
+        #                         break
+        #                 if inner_flag:
+        #                     count += 1
+
+                            
+
 
         return count
 
